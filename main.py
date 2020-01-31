@@ -12,10 +12,7 @@ class ModelName(str, Enum):
 app = FastAPI()
 
 
-@app.get("/model/{model_name}")
-async def get_model(model_name: ModelName):
-    if model_name == ModelName.alexnet:
-        return {"model_name": model_name, "message": "Deep Learning FTW!"}
-    if model_name.value == "lenet":
-        return {"model_name": model_name, "message": "LeCNN all the images"}
-    return {"model_name": model_name, "message": "Have some residuals"}
+# From URL
+@app.get("/crop/{url}")
+async def crop_from_URL(url):
+    return {"model_name": url, "message": "Have some residuals"}
