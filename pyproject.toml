@@ -8,6 +8,8 @@ license = "MIT"
 [tool.poetry.dependencies]
 python = "^3.7"
 fastapi = {extras = ["all"], version = "^0.47.1"}
+python-multipart = "^0.0.5"
+autocrop = "^0.3.5"
 
 [tool.poetry.dev-dependencies]
 

@@ -19,3 +19,5 @@ For this test, the plan is to wire the autocrop OpenCV model to a simple API. We
 * Read from URL
 * Read from header
 
+## Other
+R-spec for Python?
