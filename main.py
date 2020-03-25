@@ -21,7 +21,7 @@ def open_file(file):
         return np.asarray(img_orig)
 
 
-def upload_img_file(img, ext:str):
+def upload_img_file(img, ext: str):
     """Given an img file, returns a temp file to user."""
     with tempfile.NamedTemporaryFile(mode="w+b", suffix=ext, delete=False) as FOUT:
         FOUT.write(img)
@@ -29,14 +29,17 @@ def upload_img_file(img, ext:str):
 
 
 @app.post("/crop")
-def image_endpoint(width: int=None, height: int=None, face_percent: int=None, file: UploadFile = File(...)):
+async def image_endpoint(
+    width: int = 500,
+    height: int = 500,
+    face_percent: int = 50,
+    file: UploadFile = File(...),
+):
     """Returns a cropped form of the document image."""
     _, file_extension = os.path.splitext(file.filename)
 
     # Set up Cropper instance and crop
-    args = {'width': width, 'height': height, 'face_percent': face_percent}
-    kwargs = {k: v for k, v in args.items() if v is not None}
-    c = Cropper(**kwargs)
+    c = Cropper(width=width, height=height, face_percent=face_percent)
 
     # Crop
     img = open_file(file)
