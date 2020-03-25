@@ -436,7 +436,7 @@ python-versions = ">=3.6.1"
 version = "8.1"
 
 [metadata]
-content-hash = "9f69463b5f5a57a5d1aa4006506644d2ceccb776123e45d23f772a8725a8efc0"
+content-hash = "eaad3f4d306e16686689c8ad511e8be02af782d72eccab69afaefdc1e5877d69"
 python-versions = "^3.7"
 
 [metadata.files]
