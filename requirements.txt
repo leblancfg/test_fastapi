@@ -9,7 +9,8 @@ click==7.1.1
 dnspython==1.16.0
 email-validator==1.0.5
 fastapi==0.47.1
-gunicorn
+fastapi_versioning=0.4.0
+gunicorn==20.0.4
 graphene==2.1.8
 graphql-core==2.3.1
 graphql-relay==2.0.1
@@ -30,7 +31,6 @@ requests==2.23.0
 Rx==1.6.1
 six==1.14.0
 starlette==0.12.9
--e git+https://github.com/leblancfg/test_fastapi@06fa46ac6f2bcdd61c3cb7b1b9826b8170aa9b86#egg=test_fastapi
 ujson==2.0.3
 urllib3==1.25.8
 uvicorn==0.11.3
