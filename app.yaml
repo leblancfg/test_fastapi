@@ -1,17 +1,19 @@
 runtime: python38
-entrypoint: uvicorn main:app
+# entrypoint: uvicorn main:app --host 0.0.0.0 --port 80
+# entrypoint: gunicorn -k uvicorn.workers.UvicornWorker
+entrypoint: gunicorn --bind 0.0.0.0:$PORT -c gunicorn_conf.py main:app
 
-instance_class: F2
+# instance_class: B1
 
 # env_variables:
 #   BUCKET_NAME: "example-gcs-bucket"
 
-handlers:
-# # Matches requests to /images/... to files in static/images/...
-# - url: /images
-#   static_dir: static/images
-
-- url: /.*
-  secure: always
-  redirect_http_response_code: 301
-  script: auto
+# handlers:
+# # # Matches requests to /images/... to files in static/images/...
+# # - url: /images
+# #   static_dir: static/images
+# 
+# - url: /.*
+#   secure: always
+#   redirect_http_response_code: 301
+#   script: auto
