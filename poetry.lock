@@ -159,6 +159,14 @@ test = ["pytest (>=4.0.0)", "pytest-cov", "mypy", "black", "isort", "requests", 
 
 [[package]]
 category = "main"
+description = "api versioning for fastapi web applications"
+name = "fastapi-versioning"
+optional = false
+python-versions = ">=3.7"
+version = "0.4.0"
+
+[[package]]
+category = "main"
 description = "GraphQL Framework for Python"
 name = "graphene"
 optional = false
@@ -436,7 +444,7 @@ python-versions = ">=3.6.1"
 version = "8.1"
 
 [metadata]
-content-hash = "eaad3f4d306e16686689c8ad511e8be02af782d72eccab69afaefdc1e5877d69"
+content-hash = "7fdd93dc173d32c886381d9c267cf795f0ea35cfa7f6b1bb18160c9aaa3ff36d"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -481,6 +489,10 @@ email-validator = [
 fastapi = [
     {file = "fastapi-0.47.1-py3-none-any.whl", hash = "sha256:3130313f23935d99150953422dfe5f6b43f043b6fe3aac22cc4c8d537a4464d9"},
     {file = "fastapi-0.47.1.tar.gz", hash = "sha256:be62491f536dc50041913a37bdcd6b5e05c84e756ff331506b5afeddec859013"},
+]
+fastapi-versioning = [
+    {file = "fastapi_versioning-0.4.0-py3-none-any.whl", hash = "sha256:200f90e4f7475d7166bc8b8f3277e55b84faba4d6be9f0a7b0bd73c47c60f9e2"},
+    {file = "fastapi_versioning-0.4.0.tar.gz", hash = "sha256:62075ea68fad14dbc0a7dc5b54146633c6171205cfc5f545ff887b6bee4b5fbf"},
 ]
 graphene = [
     {file = "graphene-2.1.8-py2.py3-none-any.whl", hash = "sha256:09165f03e1591b76bf57b133482db9be6dac72c74b0a628d3c93182af9c5a896"},
