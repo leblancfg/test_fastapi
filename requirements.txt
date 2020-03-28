@@ -25,6 +25,7 @@ opencv-python==3.4.9.31
 Pillow==7.0.0
 promise==2.3
 pydantic==1.4
+python-magic==0.4.15
 python-multipart==0.0.5
 PyYAML==5.3.1
 requests==2.23.0

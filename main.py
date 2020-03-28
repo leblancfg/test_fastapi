@@ -1,9 +1,10 @@
 import io
 import logging
-import os
+from mimetypes import guess_extension
 import tempfile
 
 import cv2
+import magic
 import numpy as np
 from PIL import Image
 from autocrop.autocrop import Cropper
@@ -21,7 +22,7 @@ app.add_middleware(
 )
 
 
-def open_file(file, extension):
+def open_file(file):
     """Given a filename, returns a numpy array"""
     try:
         # Try with PIL
@@ -31,20 +32,23 @@ def open_file(file, extension):
         # Try with cv2
         # TODO: this might not be working
         return cv2.imread(file)
-    return None
+    return None, None
 
 
-# def open_file(file):
-#     """Given a file object, returns a numpy array"""
-#     with Image.open(file.file) as img_orig:
-#         return np.asarray(img_orig)
-
-
-def upload_img_file(img, ext: str):
+async def upload_img_file(img, ext: str, mime: str):
     """Given an img file, returns a temp file to user."""
+    if "." in ext:
+        ext = ext[1:]
     with tempfile.NamedTemporaryFile(mode="w+b", suffix=ext, delete=False) as FOUT:
         FOUT.write(img)
-        return FileResponse(FOUT.name, media_type="image/png")
+        return FileResponse(FOUT.name, media_type=mime)
+
+
+def get_mime(file):
+    """Given a file, returns mimetype and extension"""
+    mime = magic.from_buffer(file.read(2048), mime=True)
+    extension = guess_extension(mime, False)
+    return mime, extension
 
 
 @app.post("/crop")
@@ -56,21 +60,25 @@ async def crop(
     file: UploadFile = File(...),
 ):
     """Returns a cropped form of the document image."""
-    _, file_extension = os.path.splitext(file.filename)
+    mime, extension = get_mime(file.file)
+    logging.info(f"Reading file: {mime}, {extension}")
 
     # Set up Cropper instance and crop
     c = Cropper(width=width, height=height, face_percent=face_percent)
 
     # Crop
-    img = open_file(file.file, file_extension)
+    img = open_file(file.file)
     img_array = c.crop(img)
     if img_array is None:
         return None
 
     # Convert to bytes
-    is_success, img_buffer = cv2.imencode(file_extension, img_array)
+    is_success, img_buffer = cv2.imencode(extension, img_array)
+    if not is_success:
+        return None
+
     byte_im = img_buffer.tobytes()
-    return upload_img_file(img=byte_im, ext=file_extension)
+    return await upload_img_file(img=byte_im, ext=extension, mime=mime)
 
 
 @app.post("/crop_uri")
@@ -79,7 +87,6 @@ async def crop_uri(
     uri: AnyHttpUrl, width: int = 500, height: int = 500, face_percent: int = 50,
 ):
     """Returns a cropped form of the document image."""
-    _, file_extension = os.path.splitext(uri)
 
     # Set up Cropper instance and crop
     c = Cropper(width=width, height=height, face_percent=face_percent)
@@ -90,26 +97,31 @@ async def crop_uri(
         # TODO
         return None
     file = io.BytesIO(r.content)
+    mime, extension = get_mime(file)
+    logging.info(f"Reading file: {mime}, {extension}")
 
-    img = open_file(file, file_extension)
+    img = open_file(file)
     img_array = c.crop(img)
     if img_array is None:
         # TODO
-        return None
+        return {'face detected': None}
 
     # Convert to bytes
-    is_success, img_buffer = cv2.imencode(file_extension, img_array)
+    is_success, img_buffer = cv2.imencode(extension, img_array)
+    if not is_success:
+        # TODO
+        return {'face detected': None}
     byte_im = img_buffer.tobytes()
-    return upload_img_file(img=byte_im, ext=file_extension)
+    return await upload_img_file(img=byte_im, ext=extension, mime=mime)
 
 
-@app.get("/")
-@version(1)
+@app.get("/*")
 def home():
     return {
         "autocrop API": {
             "version": "1",
             "source": "https://github.com/leblancfg/autocrop",
+            "docs": "$URL/v1/docs",
         }
     }
 
