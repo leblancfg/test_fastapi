@@ -10,16 +10,32 @@ from PIL import Image
 from autocrop.autocrop import Cropper
 
 from fastapi import FastAPI, File, UploadFile
+from starlette.responses import UJSONResponse
 from fastapi_versioning import VersionedFastAPI, version
 from pydantic import AnyHttpUrl
 import requests
 from starlette.responses import FileResponse
 from starlette.middleware.cors import CORSMiddleware
 
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+]
+
 app = FastAPI()
 app.add_middleware(
-    CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"]
+    CORSMiddleware,
+    allow_origins=["*"],  # TODO
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+
+@app.options('/crop')
+def preflight():
+    return UJSONResponse({'status': 'ok'}, headers={'Access-Control-Allow-Origin': '*'})
+
 
 
 def open_file(file):
@@ -51,6 +67,7 @@ def get_mime(file):
     return mime, extension
 
 
+# @app.route(path="/crop", methods=["POST", "OPTIONS"])
 @app.post("/crop")
 @version(1)
 async def crop(
@@ -104,13 +121,13 @@ async def crop_uri(
     img_array = c.crop(img)
     if img_array is None:
         # TODO
-        return {'face detected': None}
+        return {"face detected": None}
 
     # Convert to bytes
     is_success, img_buffer = cv2.imencode(extension, img_array)
     if not is_success:
         # TODO
-        return {'face detected': None}
+        return {"face detected": None}
     byte_im = img_buffer.tobytes()
     return await upload_img_file(img=byte_im, ext=extension, mime=mime)
 
