@@ -14,28 +14,20 @@ from starlette.responses import UJSONResponse
 from fastapi_versioning import VersionedFastAPI, version
 from pydantic import AnyHttpUrl
 import requests
-from starlette.responses import FileResponse
+from starlette import status
+from starlette.responses import Response, FileResponse
+from starlette.requests import Request
+from starlette.types import ASGIApp
 from starlette.middleware.cors import CORSMiddleware
-
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-]
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # TODO
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
-@app.options('/crop')
-def preflight():
-    return UJSONResponse({'status': 'ok'}, headers={'Access-Control-Allow-Origin': '*'})
-
+# @app.options("/crop")
+# def preflight():
+#     return UJSONResponse({"status": "ok"}, headers={"Access-Control-Allow-Origin": 'http://localhost:8080',
+#        "Access-Control-Allow-Method": 'POST'})
 
 
 def open_file(file):
@@ -67,7 +59,6 @@ def get_mime(file):
     return mime, extension
 
 
-# @app.route(path="/crop", methods=["POST", "OPTIONS"])
 @app.post("/crop")
 @version(1)
 async def crop(
@@ -79,6 +70,9 @@ async def crop(
     """Returns a cropped form of the document image."""
     mime, extension = get_mime(file.file)
     logging.info(f"Reading file: {mime}, {extension}")
+    if "image" not in mime:
+        logging.info
+        return Response(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
     # Set up Cropper instance and crop
     c = Cropper(width=width, height=height, face_percent=face_percent)
@@ -144,3 +138,16 @@ def home():
 
 
 app = VersionedFastAPI(app, version_format="{major}", prefix_format="/v{major}",)
+
+origins = [
+    "http://localhost",
+    "http://localhost:8080",
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
