@@ -12,7 +12,6 @@ from autocrop.autocrop import Cropper
 
 from google.cloud import storage
 
-import httpx
 from fastapi import FastAPI, File, UploadFile
 from fastapi_versioning import VersionedFastAPI, version
 from pydantic import AnyHttpUrl
@@ -41,7 +40,7 @@ def open_file(file):
     return None, None
 
 
-async def upload_blob(img, ext: str, mime: str):
+def upload_blob(img, ext: str, mime: str):
     """Given an img array and extension, uploads it to GStorage."""
     if "." in ext:
         ext = ext[1:]
@@ -49,10 +48,10 @@ async def upload_blob(img, ext: str, mime: str):
     logging.info(f"Uploading to Storage: {filename}")
 
     blob = bucket.blob(filename)
-    async with tempfile.NamedTemporaryFile(suffix=ext) as temp:
+    with tempfile.NamedTemporaryFile(suffix=ext) as temp:
         temp_filename = temp.name + "." + ext
         cv2.imwrite(temp_filename, img)
-        status = await blob.upload_from_filename(temp_filename, content_type=mime)
+        blob.upload_from_filename(temp_filename, content_type=mime)
     blob.make_public()
     return blob.public_url
 
