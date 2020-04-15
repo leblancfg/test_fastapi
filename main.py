@@ -1,13 +1,18 @@
 import io
 import logging
 from mimetypes import guess_extension
+import os
 import tempfile
+import uuid
 
 import cv2
 import magic
 import numpy as np
 from PIL import Image
 from autocrop.autocrop import Cropper
+
+
+from google.cloud import storage
 
 from fastapi import FastAPI, File, UploadFile
 from starlette.responses import UJSONResponse
@@ -21,13 +26,11 @@ from starlette.types import ASGIApp
 from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+BUCKET = "autocrop-img"
+
 app = FastAPI()
-
-
-# @app.options("/crop")
-# def preflight():
-#     return UJSONResponse({"status": "ok"}, headers={"Access-Control-Allow-Origin": 'http://localhost:8080',
-#        "Access-Control-Allow-Method": 'POST'})
+storage_client = storage.Client()  # Implicitly reads environment variable
+bucket = storage_client.bucket(BUCKET)
 
 
 def open_file(file):
@@ -43,11 +46,26 @@ def open_file(file):
     return None, None
 
 
+def upload_blob(img, ext: str, mime:str):
+    """Given an img array and extension, uploads it to GStorage."""
+    if "." in ext:
+        ext = ext[1:]
+    filename = str(uuid.uuid4()) + '.' + ext
+    logging.info(f'Uploading to Storage: {filename}')
+
+    blob = bucket.blob(filename)
+    with tempfile.NamedTemporaryFile(suffix=ext) as temp:
+        temp_filename = temp.name + '.' + ext
+        cv2.imwrite(temp_filename, img)
+        blob.upload_from_filename(temp_filename, content_type=mime)
+    return blob.public_url
+
+
 async def upload_img_file(img, ext: str, mime: str):
     """Given an img file, returns a temp file to user."""
     if "." in ext:
         ext = ext[1:]
-    with tempfile.NamedTemporaryFile(mode="w+b", suffix=ext, delete=False) as FOUT:
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as FOUT:
         FOUT.write(img)
         return FileResponse(FOUT.name, media_type=mime)
 
@@ -71,7 +89,6 @@ async def crop(
     mime, extension = get_mime(file.file)
     logging.info(f"Reading file: {mime}, {extension}")
     if "image" not in mime:
-        logging.info
         return Response(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
     # Set up Cropper instance and crop
@@ -89,7 +106,8 @@ async def crop(
         return None
 
     byte_im = img_buffer.tobytes()
-    return await upload_img_file(img=byte_im, ext=extension, mime=mime)
+    # return await upload_img_file(img=byte_im, ext=extension, mime=mime)
+    return upload_blob(img=img_array, ext=extension, mime=mime)
 
 
 @app.post("/crop_uri")
@@ -150,4 +168,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
