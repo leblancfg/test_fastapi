@@ -1,7 +1,6 @@
 import io
 import logging
 from mimetypes import guess_extension
-import os
 import tempfile
 import uuid
 
@@ -11,20 +10,16 @@ import numpy as np
 from PIL import Image
 from autocrop.autocrop import Cropper
 
-
 from google.cloud import storage
 
+import httpx
 from fastapi import FastAPI, File, UploadFile
-from starlette.responses import UJSONResponse
 from fastapi_versioning import VersionedFastAPI, version
 from pydantic import AnyHttpUrl
 import requests
 from starlette import status
 from starlette.responses import Response, FileResponse
-from starlette.requests import Request
-from starlette.types import ASGIApp
 from starlette.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 BUCKET = "autocrop-img"
 
@@ -46,18 +41,19 @@ def open_file(file):
     return None, None
 
 
-def upload_blob(img, ext: str, mime:str):
+async def upload_blob(img, ext: str, mime: str):
     """Given an img array and extension, uploads it to GStorage."""
     if "." in ext:
         ext = ext[1:]
-    filename = str(uuid.uuid4()) + '.' + ext
-    logging.info(f'Uploading to Storage: {filename}')
+    filename = str(uuid.uuid4()) + "." + ext
+    logging.info(f"Uploading to Storage: {filename}")
 
     blob = bucket.blob(filename)
-    with tempfile.NamedTemporaryFile(suffix=ext) as temp:
-        temp_filename = temp.name + '.' + ext
+    async with tempfile.NamedTemporaryFile(suffix=ext) as temp:
+        temp_filename = temp.name + "." + ext
         cv2.imwrite(temp_filename, img)
-        blob.upload_from_filename(temp_filename, content_type=mime)
+        status = await blob.upload_from_filename(temp_filename, content_type=mime)
+    blob.make_public()
     return blob.public_url
 
 
@@ -87,7 +83,7 @@ async def crop(
 ):
     """Returns a cropped form of the document image."""
     mime, extension = get_mime(file.file)
-    logging.info(f"Reading file: {mime}, {extension}")
+    logging.info(f"Reading file: {file.filename}, mime: {mime}")
     if "image" not in mime:
         return Response(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
@@ -98,16 +94,14 @@ async def crop(
     img = open_file(file.file)
     img_array = c.crop(img)
     if img_array is None:
-        return None
+        return {"success": False, "description": "No face detected", "url": None}
 
-    # Convert to bytes
-    is_success, img_buffer = cv2.imencode(extension, img_array)
-    if not is_success:
-        return None
-
-    byte_im = img_buffer.tobytes()
-    # return await upload_img_file(img=byte_im, ext=extension, mime=mime)
-    return upload_blob(img=img_array, ext=extension, mime=mime)
+    url = upload_blob(img=img_array, ext=extension, mime=mime)
+    return {
+        "success": True,
+        "description": "Face detected, cropped at url provided.",
+        "url": url,
+    }
 
 
 @app.post("/crop_uri")
@@ -163,7 +157,7 @@ origins = [
 ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=['*'],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
