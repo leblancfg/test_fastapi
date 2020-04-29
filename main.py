@@ -7,6 +7,7 @@ import uuid
 from autocrop.autocrop import Cropper
 import cv2
 from google.cloud import storage
+import google.cloud.logging
 import magic
 import numpy as np
 from PIL import Image
@@ -30,9 +31,10 @@ storage_client = storage.Client()  # Implicitly reads environment variable
 bucket = storage_client.bucket(BUCKET)
 
 # Logging
-# handler = Rotating
-# logging.getLogger().setLevel(logging.NOTSET)
-# fastapi_logger.addHandler(handler)
+# Instantiates a client
+client = google.cloud.logging.Client()
+# Connects the logger to the root logging handler
+client.setup_logging()
 
 def open_file(file):
     """Given a filename, returns a numpy array"""
