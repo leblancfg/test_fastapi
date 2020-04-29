@@ -4,28 +4,35 @@ from mimetypes import guess_extension
 import tempfile
 import uuid
 
+from autocrop.autocrop import Cropper
 import cv2
+from google.cloud import storage
 import magic
 import numpy as np
 from PIL import Image
-from autocrop.autocrop import Cropper
+import requests
 
-from google.cloud import storage
 
 from fastapi import FastAPI, File, UploadFile
 from fastapi_versioning import VersionedFastAPI, version
-from pydantic import AnyHttpUrl
-import requests
+from fastapi.logger import logger as fastapi_logger
+
 from starlette import status
 from starlette.responses import Response, FileResponse
 from starlette.middleware.cors import CORSMiddleware
-
-BUCKET = "autocrop-img"
+from pydantic import AnyHttpUrl
 
 app = FastAPI()
+
+# Google Cloud Storage
+BUCKET = "autocrop-img"
 storage_client = storage.Client()  # Implicitly reads environment variable
 bucket = storage_client.bucket(BUCKET)
 
+# Logging
+# handler = Rotating
+# logging.getLogger().setLevel(logging.NOTSET)
+# fastapi_logger.addHandler(handler)
 
 def open_file(file):
     """Given a filename, returns a numpy array"""
@@ -34,6 +41,7 @@ def open_file(file):
         with Image.open(file) as img_orig:
             return np.asarray(img_orig)
     except Exception:
+        fastapi_logger.warn(f"PIL unable to open {file}, trying cv2.")
         # Try with cv2
         # TODO: this might not be working
         return cv2.imread(file)
@@ -45,7 +53,7 @@ def upload_blob(img, ext: str, mime: str):
     if "." in ext:
         ext = ext[1:]
     filename = str(uuid.uuid4()) + "." + ext
-    logging.info(f"Uploading to Storage: {filename}")
+    fastapi_logger.info(f"Uploading to Storage: {filename}")
 
     blob = bucket.blob(filename)
     with tempfile.NamedTemporaryFile(suffix=ext) as temp:
@@ -82,7 +90,7 @@ async def crop(
 ):
     """Returns a cropped form of the document image."""
     mime, extension = get_mime(file.file)
-    logging.info(f"Reading file: {file.filename}, mime: {mime}")
+    fastapi_logger.info(f"Reading file: {file.filename}, mime: {mime}")
     if "image" not in mime:
         return Response(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE)
 
@@ -120,7 +128,7 @@ async def crop_uri(
         return None
     file = io.BytesIO(r.content)
     mime, extension = get_mime(file)
-    logging.info(f"Reading file: {mime}, {extension}")
+    fastapi_logger.info(f"Reading file: {mime}, {extension}")
 
     img = open_file(file)
     img_array = c.crop(img)
@@ -148,6 +156,11 @@ def home():
     }
 
 
+@app.get("/healthcheck")
+async def healthcheck():
+    return {"status": "alive"}
+
+
 app = VersionedFastAPI(app, version_format="{major}", prefix_format="/v{major}",)
 
 origins = [
@@ -156,7 +169,7 @@ origins = [
 ]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
